@@ -22,7 +22,7 @@ using json = nlohmann::json;
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
-#define DEV_MOTD true
+#define DEV_MOTD false
 
 atomic<bool> keep_running(true);
 
