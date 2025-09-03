@@ -51,13 +51,12 @@ void receive_thread(int sockfd,string& REMARK_ONLINE, json& config) {
             string received_message(buffer, bytes_received);
 
             string display_name;
-            if (!config["REMARK"][sender_ip].is_null()) {
+            if (!config["REMARK"][sender_ip].is_null())
                 display_name = config["REMARK"][sender_ip]; // JSON 裡的固定備註
-            } else if (!REMARK_ONLINE.empty()) {
+            else if (!REMARK_ONLINE.empty())
                 display_name = REMARK_ONLINE; // 使用最新用戶備註
-            } else {
+            else
                 display_name = sender_ip; // 默認 IP
-            }
 
             cout << "\n[\033[32m來自 " <<"\033[33m"<< display_name <<"\033[32m"<< " 的訊息\033[0m]: " << received_message << endl;
             cout << "> ";
@@ -269,11 +268,6 @@ int main() {
         if(result== "false"){
             continue;
         }
-        /*
-        if (result == SetServerResult::INVALID_IP) {
-            continue; // 只跳過當前迴圈，重新要求輸入
-        }*/
-
 
         cout << "已設定伺服器 IP。現在可以發送訊息。輸入 'CHANGE_IP' 再次更改 IP，輸入REMARK將這個ip添加備注， 輸入'QUIT' 退出，輸入'STOP'關閉應用程式。" << endl;
         
@@ -281,19 +275,16 @@ int main() {
             cout << "> ";
             getline(cin, message);
 
-            if (message == "QUIT") {
+            if (message == "QUIT")
                 goto end_program; // 使用 goto 來安全地跳出多層迴圈
-            } else if (message == "CHANGE_IP") {
+            else if (message == "CHANGE_IP") {
                 cout << "正在更改伺服器 IP..." << endl;
                 break; // 跳出內層迴圈，回到外層迴圈重新設定 IP
             } else if (message == "REMARK") {
                 cout<<"請輸入將現在聊天的ip（"<<ip<<"）添加的備注：";
                 cin>>REMARK_ONLINE;
                 config["REMARK"][ip] = REMARK_ONLINE;
-
             }
-
-            
             
             sendto(sockfd, message.c_str(), message.length(), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
         }
