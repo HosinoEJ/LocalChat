@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <functional>
 #include <iostream>
 #include <unistd.h>
@@ -129,44 +130,28 @@ string LOC_NAME(){
 
     
     ifstream langfile(lang);
-    if(!langfile.is_open())
+    if(langfile.is_open())
         lang = "en_US";
     return lang;
 }
 string CONFIG_LINK(){
     string path,lang;
-    if (DEV_MOTD == true) {
-        path = "config.json";
-        lang = "lang/en.json";
-        //cout<<getenv("HOME")<<"FUCK Linux";
-        //cout<<string(getenv("HOME")) + "/.config/HosinoEJChat/config.json";
-    } else {
-        path = string(getenv("HOME")) + "/.config/HosinoEJChat/config.json";
-        lang = string(getenv("HOME")) + "/.config/HosinoEJChat/lang/en.json";
-    }
-    ifstream file(path);
-    if (!file.is_open())
-        cerr << "ERROR:CONFIG FILE IS NOTHING IN: " << path << "!\n";//FUCK WINDOWS AND LINUX AND FUCK U MOTHER BEACH APPLE!!!!!!!!!!
-    
-    ifstream langfile(lang);
-    if(!langfile.is_open())
-        cerr << "ERROR:LANGUAGE JSON FILE IS NOTHING IN: " << path << "!\n";
-
-    // 檢查檔案是否為空
-    if (file.peek() == ifstream::traits_type::eof()) {
-        cerr << "ERROR: CONFIG FILE IS BAD"<< "\n";
-    }
+    if (DEV_MOTD == true) 
+        path = "./";
+    else
+        path = string(getenv("HOME")) + "/.config/HosinoEJChat/";
 
     return path;
 }
 void Detection(){
     cout<<"Self-testing..."<<endl;
-    CONFIG_LINK();
+    //CONFIG_LINK();
     if (DEV_MOTD == true) {
         cout<<"\033[31mPlease note! Debug mode is enabled! This is what developers use when debugging programs! It can cause all sorts of security issues! I don't know how the hell you got this version, so if you want to disable it, please download it again.\033[0m\n";//軟體都能下錯，真是雜魚~
         cout<<"\033[33mYou are running this program in a "<<RunningON()<<" environment"<<endl;
-        cout<<"Configuration archive directory:"<<CONFIG_LINK()<<"\033[0m"<<endl;
+        cout<<"Configuration archive directory:"<<CONFIG_LINK()<<"config.json"<<"\033[0m"<<endl;
     }
+    cout<<"Self-tested, Welcome. Ciallo～(∠・ω< )⌒★!";
 }
 
 void REMARK(json& config) {
@@ -183,14 +168,58 @@ int main() {
 
     
     Detection();//自檢程序
- 
-    //cout<<CONFIG_LINK();
-    ifstream file(CONFIG_LINK());
-    ifstream lang_config(CONFIG_LINK()+"/lang/" + LOC_NAME() + ".json");
+    
+    
+    
+    string config_path = CONFIG_LINK() + "config.json";
+    string lang_path = CONFIG_LINK() + "lang/" + LOC_NAME() + ".json";
+    json config, lang;
 
-    json config,lang;
-    file >> config;
-    lang_config >> lang;
+    ifstream file(config_path);
+    ifstream langPH(lang_path);
+    if (!file.is_open()) {
+        cout << "Config file not found, initializing empty config." << endl;
+        config = json::object();
+    }
+    else {
+        file.seekg(0, ios::end);
+        if (file.tellg() == 0) {
+            cout << "Config file is empty, initializing empty JSON." << endl;
+            config = json::object();
+        } else {
+            file.seekg(0, ios::beg);
+            try {
+                file >> config;
+            } catch (json::parse_error &e) {
+                cerr << "ERROR: JSON parse error: " << e.what() << endl;
+                exit(EXIT_FAILURE);
+            }
+        }
+        file.close();
+    }
+
+
+    if (!langPH.is_open()) {
+        cout << "Lang config file not found, initializing empty lang config." << endl;
+        lang = json::object();
+    }
+    else {
+        langPH.seekg(0, ios::end);
+        if (langPH.tellg() == 0) {
+            cout << "Lang config file is empty, initializing empty JSON." << endl;
+            lang = json::object();
+        } else {
+            langPH.seekg(0, ios::beg);
+            try {
+                langPH >> lang;
+            } catch (json::parse_error &e) {
+                cerr << "ERROR: JSON parse error: " << e.what() << endl;
+                exit(EXIT_FAILURE);
+            }
+        }
+        langPH.close();
+    }
+
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("socket creation failed");
@@ -222,7 +251,7 @@ int main() {
     while (true) {
         while (true) {
             string options;
-            cin>>options;
+            getline(cin, options);  
             if(options == "chat")
                 break;
             if(options == "STOP")
