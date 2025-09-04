@@ -1,4 +1,8 @@
 {
+    "set": {
+        "language": "zh_TW",
+        "GUI": false
+    },
     "REMARK": {
         "1.1.1.1": "CF",
         "127.0.0.1": "Sakura"

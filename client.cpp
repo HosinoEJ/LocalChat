@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <unistd.h>
@@ -13,6 +14,9 @@
 #include <fstream>
 #include "json.hpp"
 #include <locale>
+
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 //#include "sb.h"//WDF你tm來搞笑？
 //#include <windows.h>
 
@@ -22,7 +26,7 @@ using json = nlohmann::json;
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
-#define DEV_MOTD false
+#define DEV_MOTD true
 
 atomic<bool> keep_running(true);
 
@@ -144,13 +148,14 @@ string CONFIG_LINK(){
 }
 void Detection(){
     cout<<"Self-testing..."<<endl;
+    cout<<"COLOR TESTING:\033[31mH\033[32mo\033[33ms\033[34mi\033[35mn\033[36mo\033[37mE\033[38mJ"<<endl;
     //CONFIG_LINK();
     if (DEV_MOTD == true) {
         cout<<"\033[31mPlease note! Debug mode is enabled! This is what developers use when debugging programs! It can cause all sorts of security issues! I don't know how the hell you got this version, so if you want to disable it, please download it again.\033[0m\n";//軟體都能下錯，真是雜魚~
         cout<<"\033[33mYou are running this program in a "<<RunningON()<<" environment"<<endl;
         cout<<"Configuration archive directory:"<<CONFIG_LINK()<<"config.json"<<"\033[0m"<<endl;
     }
-    cout<<"Self-tested, Welcome. Ciallo～(∠・ω< )⌒★!";
+    cout<<"Self-tested, Welcome. Ciallo～(∠・ω< )⌒★!"<<endl<<endl;
 }
 
 void REMARK(json& config) {
@@ -158,6 +163,60 @@ void REMARK(json& config) {
     cin>>in;
 }
 
+json setting (json& config){//設置
+    int setting;
+
+    while (true) {
+        cout << "\033[2J\033[1;1H";
+
+        cin>>setting;
+        if(setting == 1){//Language
+            string lang_index = CONFIG_LINK() + "lang/" + "index.json", setLang;
+            json index;
+            ifstream index_FL(lang_index);
+            index_FL >> index;
+            index_FL.close();
+
+            setstart:
+            cout<<"請輸入設定的語言：";
+            cin>>setLang;
+            if(index[setLang] == true){
+                run:
+                config["set"]["language"] = setLang;
+                cout<<"\033[32msuccess\033[0m"<<endl;
+            }
+            else if(index[setLang] == false || index[setLang].empty()){
+                cout<<"\033[31m警告：本語言不可用\033[0m"<<endl;
+                goto setstart;
+            }
+            else{
+                cout
+                <<"\033[33m警告：本語言翻譯進度僅有\033[31m"
+                <<index[setLang]
+                <<"\033[33m，可能會導致崩潰，請問是否選擇？\033[0m[y/n]\n";
+                char a;
+                cin>>a;
+                if(a == 'y')
+                    goto run;
+                else
+                    goto setstart;
+            }
+        }
+
+        if(setting == 2){//GUI
+            if(RunningON() == "Linux"){
+                cout<<"是否開啓GUI？[y/n]"<<endl;
+                char a;
+                cin>>a;
+                if(a == 'y')
+                    config["set"]["GUI"] = true;
+            }
+        }
+        if(setting == 0)
+            break;
+    }
+    return config;
+}
 // 主執行緒：處理發送訊息和使用者輸入
 int main() {
     int sockfd;
@@ -249,24 +308,47 @@ int main() {
     // 主迴圈
     while (true) {
         while (true) {
+            cout << "\033[2J\033[1;1H";
+            //LIST
+            cout<<"功能列表："<<endl;
+            cout<<"chat:開啓聊天"<<endl
+            <<"----------------------------"<<endl
+            <<"setting:開啓設定"<<endl
+            <<"----------------------------"<<endl
+            <<"STOP:關閉程式"<<endl
+            <<"----------------------------"<<endl;
+
+            cout<<"請輸入：";
+
             string options;
             getline(cin, options);  
             if(options == "chat")
                 break;
             if(options == "STOP")
                 goto end_program;
-            if(options == "setting")
-                cout<<"稍等，我還沒做這個功能";
+            if(options == "setting"){
+                //continue;//開發工作重心轉移，先不做
+                json s;
+                s = config;
+                config = setting(config);//前往setting
+                cout<<config<<"  "<<s;
+                //int a;cin>>a;
+                goto end_program;
+            }
+#include <openssl/err.h>
             if(options == "0d000000007218964sbXJPFUCKU!")
-                system("start https://google.com");
+                system("xdg-open https://www.hsnej.fun/port/20250708.zh-tw.TheJournalOf_STAR");
+
+            cout << "\033[2J\033[1;1H";
         }
         // 在每次循環開始時設定 IP
         //SetServerResult result = set_server_address(servaddr);
+        ip:
         string ip;
         string result = set_server_address(servaddr,ip,config);
 
         if(result== "false"){
-            continue;
+            goto ip;
         }
 
         cout << "已設定伺服器 IP。現在可以發送訊息。輸入 'CHANGE_IP' 再次更改 IP，輸入REMARK將這個ip添加備注， 輸入'QUIT' 退出，輸入'STOP'關閉應用程式。" << endl;
@@ -275,18 +357,23 @@ int main() {
             cout << "> ";
             getline(cin, message);
 
-            if (message == "QUIT")
+            if (message == "STOP")
                 goto end_program; // 使用 goto 來安全地跳出多層迴圈
             else if (message == "CHANGE_IP") {
                 cout << "正在更改伺服器 IP..." << endl;
-                break; // 跳出內層迴圈，回到外層迴圈重新設定 IP
-            } else if (message == "REMARK") {
+                goto ip;
+            }
+            else if (message == "REMARK") {
                 cout<<"請輸入將現在聊天的ip（"<<ip<<"）添加的備注：";
                 cin>>REMARK_ONLINE;
                 config["REMARK"][ip] = REMARK_ONLINE;
             }
-            
-            sendto(sockfd, message.c_str(), message.length(), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+            else if (message == "QUIT") {
+                cout << "\033[2J\033[1;1H";
+                break;
+            }
+            else
+                sendto(sockfd, message.c_str(), message.length(), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
         }
     }
 
@@ -295,10 +382,11 @@ end_program:
     keep_running = false;
     receiver.join();
 
-    ofstream out(CONFIG_LINK());
+    ofstream out(config_path);
     out << setw(4) << config << endl;
     out.close();
 
     close(sockfd);
+    cout << "\033[2J\033[1;1H";
     return 0;
 }
